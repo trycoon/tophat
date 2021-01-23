@@ -7,13 +7,14 @@
 #define MOTOR_FAULT_PIN 11
 #define SMOKER_PIN 10
 #define SMOKER_FAN_PIN 9
+#define STATUS_LED_PIN 2
 
 #define DEGREES_PER_STEP 7.5  // motor resolution when fullstepping
 #define STEPS_FOR_360 360 / 7.5
 #define PUFF_DELAY 5000       // milliseconds between puffs
 
 #define ADC_NUM_SAMPLES 5
-#define BATTERY_MINIMUM 6
+#define BATTERY_MINIMUM 6     // 3.0V per cell is lowest recommendation for Li-Ion cells (2 x 3.0 = 6V)
 
 uint8_t steps = 1;
 unsigned long last_puff = millis();
@@ -33,10 +34,15 @@ void setup() {
   pinMode(SMOKER_FAN_PIN, OUTPUT);
   digitalWrite(SMOKER_FAN_PIN, LOW);
 
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  digitalWrite(STATUS_LED_PIN, LOW);  // Show that we are on, and LED is working
+
   Serial.begin(9600);
   Serial.println("Setup done, wait a while before we start.");
 
   delay(5000);
+
+  digitalWrite(STATUS_LED_PIN, HIGH);  // Turn off LED
 }
 
 void step_motor() {
@@ -80,7 +86,7 @@ void check_battery() {
       sum += analogRead(A2);
       delay(5);
   }
-  auto voltage = ((float)sum / (float)ADC_NUM_SAMPLES * 5.0) / 1024.0 * 2;  // 2 = voltage divider
+  auto voltage = ((float)sum / (float)ADC_NUM_SAMPLES * 5.0) / 1024.0 * 2;  // 2 = voltage divider of equal resistant
   if (voltage < BATTERY_MINIMUM) {
     Serial.print(", battery voltage too low! ");
     Serial.print(voltage);
@@ -89,6 +95,13 @@ void check_battery() {
     digitalWrite(SMOKER_PIN, LOW);
     digitalWrite(SMOKER_FAN_PIN, LOW);
     digitalWrite(MOTOR_SLEEP_PIN, LOW);
+
+    // flash LED to show battery is too low
+    for (auto i = 0; i < 5; i++) {
+      digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+      delay(500);
+    }
+
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     cli();  // Disable interrupts
     sleep_mode();

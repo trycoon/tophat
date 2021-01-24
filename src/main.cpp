@@ -14,7 +14,7 @@
 #define PUFF_DELAY 5000       // milliseconds between puffs
 
 #define ADC_NUM_SAMPLES 5
-#define BATTERY_MINIMUM 6     // 3.0V per cell is lowest recommendation for Li-Ion cells (2 x 3.0 = 6V)
+#define BATTERY_MINIMUM 6.2     // 3.0V per cell is lowest recommendation for Li-Ion cells (2 x 3.0 = 6V)
 
 uint8_t steps = 1;
 unsigned long last_puff = millis();
@@ -97,7 +97,7 @@ void check_battery() {
     digitalWrite(MOTOR_SLEEP_PIN, LOW);
 
     // flash LED to show battery is too low
-    for (auto i = 0; i < 5; i++) {
+    for (auto i = 0; i < 10; i++) {
       digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
       delay(500);
     }
@@ -105,6 +105,7 @@ void check_battery() {
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     cli();  // Disable interrupts
     sleep_mode();
+    exit(1);
   } else {
     Serial.print(", battery voltage: ");
     Serial.print(voltage);

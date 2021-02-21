@@ -1,23 +1,44 @@
-#include <Arduino.h>
-#include <avr/interrupt.h>
-#include <avr/sleep.h>
+#include "main.h"
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
+#include <ArduinoJson.h>
 
-#define MOTOR_SLEEP_PIN 13
-#define MOTOR_STEP_PIN 12
-#define MOTOR_FAULT_PIN 11
-#define SMOKER_PIN 10
-#define SMOKER_FAN_PIN 9
-#define STATUS_LED_PIN 2
+#define MOTOR_SLEEP_PIN D1
+#define MOTOR_STEP_PIN D3
+#define MOTOR_FAULT_PIN D2
+#define SMOKER_PIN D8
+#define SMOKER_FAN_PIN D7
+#define STATUS_LED_PIN D6
 
-#define DEGREES_PER_STEP 7.5  // motor resolution when fullstepping
+#define DEGREES_PER_STEP 7.5    // motor resolution when fullstepping
 #define STEPS_FOR_360 360 / 7.5
-#define PUFF_DELAY 5000       // milliseconds between puffs
+#define PUFF_DELAY 5000         // milliseconds between puffs
 
 #define ADC_NUM_SAMPLES 5
 #define BATTERY_MINIMUM 6.2     // 3.0V per cell is lowest recommendation for Li-Ion cells (2 x 3.0 = 6V)
 
 uint8_t steps = 1;
+double current_voltage = 0;
 unsigned long last_puff = millis();
+ESP8266WebServer server(80);    // Webserver on port 80;
+
+void handleRoot() {
+ server.send(200, "text/html", MAIN_page);
+}
+
+void handleStatus(){
+  DynamicJsonDocument doc(300);
+  doc["voltage"] = current_voltage;
+  String output;
+  serializeJsonPretty(doc, output);
+  server.send(404, "application/json", output);
+}
+
+void handleNotFound(){
+  server.send(404, "text/plain", "404: Not found");
+}
 
 void setup() {
   pinMode(MOTOR_SLEEP_PIN, OUTPUT);
@@ -39,6 +60,12 @@ void setup() {
 
   Serial.begin(9600);
   Serial.println("Setup done, wait a while before we start.");
+
+  WiFi.mode(WIFI_AP);
+  server.on("/", handleRoot);
+  server.on("/status", handleStatus);
+  server.onNotFound(handleNotFound);
+  server.begin();
 
   delay(5000);
 
@@ -83,13 +110,16 @@ void check_battery() {
   auto sum = 0;
   // take a number of analog samples and add them up
   for (auto count = 0; count < ADC_NUM_SAMPLES; count++) {
-      sum += analogRead(A2);
+      sum += analogRead(A0);
       delay(5);
   }
-  auto voltage = ((float)sum / (float)ADC_NUM_SAMPLES * 5.0) / 1024.0 * 2;  // 2 = voltage divider of equal resistant
-  if (voltage < BATTERY_MINIMUM) {
+
+  //https://www.engineersgarage.com/esp8266/nodemcu-battery-voltage-monitor/
+  current_voltage = ((float)sum / (float)ADC_NUM_SAMPLES * 5.0) / 1024.0 * 2;  // 2 = voltage divider of equal resistant
+
+  if (current_voltage < BATTERY_MINIMUM) {
     Serial.print(", battery voltage too low! ");
-    Serial.print(voltage);
+    Serial.print(current_voltage);
     Serial.println("V. Shutting down!");
 
     digitalWrite(SMOKER_PIN, LOW);
@@ -102,13 +132,11 @@ void check_battery() {
       delay(500);
     }
 
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-    cli();  // Disable interrupts
-    sleep_mode();
+    ESP.deepSleep(0);
     exit(1);
   } else {
     Serial.print(", battery voltage: ");
-    Serial.print(voltage);
+    Serial.print(current_voltage);
     Serial.println("V");
   }
 }
@@ -119,15 +147,18 @@ void loop() {
 
   check_battery();
 
+  server.handleClient();          //Handle client requests
+
   digitalWrite(SMOKER_PIN, HIGH);  // activate smoker, I know we keep setting this over and over again, but so what?
 
+  /* Enable if we want to use stepper-motor
   if (steps > STEPS_FOR_360) {
     motor_do_360();
     steps = 0;
   } else {
     step_motor();
     steps++;
-  }
+  }*/
 
   if (currentMillis - last_puff > PUFF_DELAY) {
     puff_smoke();

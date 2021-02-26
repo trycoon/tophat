@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+	<head>
+			<title>Steampunk Hatt</title>
+			<meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+    	<meta name="viewport" content="width=device-width,initial-scale=1">
+			<link rel="stylesheet" href="./style.css">
+	</head>
+	<body>
+		<h1>Steampunk Hatt</h1>
+		<i>En steampunk inspirerad cylinderhatt gjord av "metallplåtar" och inbyggd rökgenerator</i>
+		<p>Batterispänning: <strong><span class="voltage">okänd</span>V</strong><br>
+			 Antal besökare: <strong><span class="clients">0</span></strong><br>
+			 Tid sedan omstart: <strong><span class="uptime">okänd</span></strong>
+		</p>
+ 	  <p>
+			<a href="https://github.com/trycoon/tophat">Bygg din EGEN hatt, https://github.com/trycoon/tophat</a>
+		 </p>
+		<h2>Inköpslista</h2>
+		<ul>
+			<li><a href="https://kristinasscrapbooking.se/dekorationer-diy/dekorgummi-mossgummi/mossgummi-ark/">"Mossgummi" till "plåtar"</a></li>
+			<li><a href="https://www.hornbach.se/shop/Loctite-Super-Epoxy-lim-dubbelspruta-25-ml/5130541/artikel-detaljer.html">Epoxy och härdare i samma spruta</a>
+			<li>Liggunderlag i cellplast. Finns i de flesta friluftslivs butiker, ta en slät variant som inte är för tunn</li>
+			<li>Svart sprayfärg, Biltema m.fl.</li>
+			<li>1-2st tuber kontaktlim, Biltema m.fl.</li>
+			<li><a href="https://www.google.com/search?q=Aged+brass+Art+alchemy+metallic+wax&tbm=isch">Mässingfärgat metallvax</a></li>
+			<li><a href="https://www.aliexpress.com/item/4001275225466.html">"Metal Engine Idling Smoke Generator for Heng Long 1/16 RC Tank Model Car 63HE"</a></li>
+			<li><a href="https://www.google.com/search?q=%22lolin+d1+mini%22&tbm=isch">"Lolin D1 Mini"</a>, ESP8266-baserad mikrocontroller</li>
+			<li>Egenbyggt kretskort med komponenter, se nedanför.
+			</li><a href="https://www.thingiverse.com/thing:2792893">3D printade skorstenar</a>, egna gjorda av koppar funkar också.</li>
+		</ul>
+
+		<h2>Byggbeskrivning</h2>
+		<ol>
+			<li>Mät omkretsen på ditt huvud med ett måttband, lägg till 2 cm för lite marginal.</li>
+			<li>Skär cylindern till hatten enligt nyss mätta mått utifrån liggunderlaget. Välj själv hur hög den skall vara, min är cirka 18cm.</li>
+			<li>Limma ihop ändarna på det utskurna liggunderlaget med kontaktlim, för att forma en cylinder. Låt torka!</li>
+			<li>Sätt på cylindern på ditt huvud, ta av den igen och försök bibehåll dess form med hjälp av händerna på sidorna. Placera den formade cylindern på resterande liggunderlag och rita av insidan på cylindern på liggunderlaget. Den ellipse som du nu har ritat på underlaget skall skäras ut med en skalpell.</li>
+			<li>Ta en linjal och mät ut cirka 10 cm från insidan av hålet som du nyss skar ut från liggunderlaget och rita ett streck, fortsätt hela vägen runt hålet. Skär längs den nya linjen du just har skapat. Grattis, du har nu skurit till brättet till hatten, limma fast cylindern på brättet med kontaktlim, se till att det blir kant till kant. Låt torka!</li>
+			<li>Klipp till olikformade fyrkanter av mossplasten och limma på bitarna på hatten med kontaktlim, gärna delvis på varandra och i lite olika vinklar. Se till att täcka hela cylindern och brättet</li>
+			<li>Tryck ut en sträng epoxy på ett papper, ta en tändsticka och rör runt för att blanda epoxi med härdare. Doppa tändstickan i epoxy och försök skapa små limdroppar längs kanterna på varje bit mossplast, dessa skall föreställa nitar i plåtarna. Låt torka!</li>
+			<li>Spraya allt svart. Låt torka!</li>
+			<li>Ta lite mässnings vax på fingret och gnugga in hela hatten med hjälp av små cirkelrörelser av finget. Detta är det magiska momentet då hatten förvandlas till ett konstverk i metall. Låt skrymslen och vrån förbli svarta, det förstärker bara djup-effekten.</li>
+			<li>Dekorera hatten efter tycke och smak. Klockor, kugghjul, fjädrar, nitar, läderremmar och bälten, m.m. är tidstypiskt för den Viktorianska tidsepoken och steampunk.</li>
+		</ol>
+
+		<h2>Bilder under projektets gång</h2>
+		<br>
+		<img src="./IMG_3954.webp" />
+		<p>Vaxad hatt, med ett gammalt skärp och med små kuggjul fastlimmade.</p>
+		<img src="./IMG_4021.webp" />
+		<br>
+		<h2>Elektronik</h2>
+		<br>
+		<p>
+		I min hatt finns lite elektronik som styr rökmaskinen, och tanken var att även en stegmotor skulle kunna styras för att erbjuda lite rörelse med utanpåliggande kugghjul.
+		Elektroniken styrs av en ESP8266 mikrokontroller på ett egenbyggt kretskort, men du kan förmodligen styra det med vad som helst.
+		Kretskort och schema kan man få tag på här: <a href="https://oshwlab.com/trycoon/tophat">https://oshwlab.com/trycoon/tophat</a>
+		</p>
+		<a href="./Schematic.pdf">Kretsschema</a><br>
+		<a href="./PCB.svg">PCB kort</a>
+		<p>Mjukvaran är skriven för <a href="https://platformio.org/">Platform.io</a>.<br>
+			 Ladda ner utvecklingsmiljön, kompilera koden och ladda upp till microkontrollern med:</p>
+		<pre>
+			platformio run -t buildfs
+			platformio run -t uploadfs
+			platformio run -t upload
+		</pre>
+
+		<script>
+			async function renderStatus() {
+   			const response = await fetch('/status', {
+    			cache: 'no-cache'
+  			});
+
+  			const status = await response.json();
+				document.querySelector(".voltage").textContent = status.voltage;
+				document.querySelector(".clients").textContent = status.clients;
+				document.querySelector(".uptime").textContent = status.uptime;
+			}
+
+			setInterval(() => {
+				renderStatus();
+			}, 2000);
+		</script>
+	</body>
+</html>

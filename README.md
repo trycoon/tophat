@@ -50,9 +50,11 @@ Kretskort och schema kan man få tag på här: https://oshwlab.com/trycoon/topha
 <a href="./hardware/Schematic_TopHat_2021-02-20.pdf">Kretsschema</a><br>
 <a href="./hardware/PCB_Tophat_PCB_2021-02-20.pdf">PCB kort</a>
 
-Mjukvaran är skriven för [Platform.io](https://platformio.org/), ladda ner utvecklingsmiljön och kompilera koden och ladda upp till microkontrollern med:
+Mjukvaran är skriven för [Platform.io](https://platformio.org/). Ladda ner utvecklingsmiljön, kompilera koden och ladda upp till microkontrollern med:
 
 ```
+  platformio run -t buildfs
+  platformio run -t uploadfs
   platformio run -t upload
 ```
 

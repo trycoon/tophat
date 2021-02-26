@@ -1,8 +1,13 @@
-#include "main.h"
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <ArduinoOTA.h>
+#include <ArduinoLog.h>
+#include <FS.h>
+#include <DNSServer.h>
 #include <ESP8266mDNS.h>
-#include <ESP8266WebServer.h>
+#include <AsyncJson.h>
 #include <ArduinoJson.h>
 
 #define MOTOR_SLEEP_PIN D1
@@ -19,25 +24,100 @@
 #define ADC_NUM_SAMPLES 5
 #define BATTERY_MINIMUM 6.2     // 3.0V per cell is lowest recommendation for Li-Ion cells (2 x 3.0 = 6V)
 
+const byte DNS_PORT = 53;
+const char *HOSTNAME = "tophat";
+
 uint8_t steps = 1;
 double current_voltage = 0;
 unsigned long last_puff = millis();
-ESP8266WebServer server(80);    // Webserver on port 80;
+DNSServer dnsServer;
+AsyncWebServer server(80);    // Webserver on port 80;
+IPAddress apIP(192, 168, 4, 1);
 
-void handleRoot() {
- server.send(200, "text/html", MAIN_page);
+void OTA_setup() {
+  ArduinoOTA.onStart([]() {
+    Log.notice(F("ArduinoOTA start" CR));
+  });
+  ArduinoOTA.onEnd([]() {
+    Log.notice(F("ArduinoOTA end" CR));
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Log.notice(F("ArduinoOTA progress: %u%" CR), (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Log.error(F("ArduinoOTA error[%u]: " CR), error);
+
+    if (error == OTA_AUTH_ERROR) Log.error(F("ArduinoOTA Auth Failed" CR));
+    else if (error == OTA_BEGIN_ERROR) Log.error(F("ArduinoOTA Begin Failed" CR));
+    else if (error == OTA_CONNECT_ERROR) Log.error(F("ArduinoOTA Connect Failed" CR));
+    else if (error == OTA_RECEIVE_ERROR) Log.error(F("ArduinoOTA Receive Failed" CR));
+    else if (error == OTA_END_ERROR) Log.error(F("ArduinoOTA End Failed" CR));
+  });
+
+  ArduinoOTA.setPort(8266);
+  ArduinoOTA.setHostname(HOSTNAME);
+  ArduinoOTA.setPassword((const char *)"goldstar");
+  ArduinoOTA.begin();
 }
 
-void handleStatus(){
-  DynamicJsonDocument doc(300);
-  doc["voltage"] = current_voltage;
-  String output;
-  serializeJsonPretty(doc, output);
-  server.send(404, "application/json", output);
+String getUptime() {
+  long millisecs = millis();
+  char s[32];
+  snprintf(s, sizeof(s), "%02dtim %02dmin %02dsec", millisecs / 1000 / 60 / 60, (millisecs / 1000 / 60) % 60, (millisecs / 1000) % 60);
+  return String(s);
 }
 
-void handleNotFound(){
-  server.send(404, "text/plain", "404: Not found");
+void wifi_setup() {
+  WiFi.mode(WIFI_AP);
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+  WiFi.softAP(HOSTNAME);
+  WiFi.hostname(HOSTNAME);
+  // If DNS server is started with "*" for domain name, it will reply with provided IP to all DNS request
+  dnsServer.start(DNS_PORT, "*", apIP);
+  if (!MDNS.begin(HOSTNAME)) {
+    Log.error(F("Error setting up MDNS responder!" CR));
+  } else {
+    Log.notice(F("mDNS responder started" CR));
+    // Add service to MDNS-SD
+    MDNS.addService("http", "tcp", 80);
+  }
+  
+  server.onNotFound([](AsyncWebServerRequest *request){
+    if (request->method() == HTTP_OPTIONS) {
+      request->send(200); // CORS-support
+    } else {
+      Log.notice(F("Web resource not found: %s" CR), request->url().c_str());
+
+      if (request->url().endsWith(".html")) {
+        request->redirect("/index.html");
+      } else {
+        request->send(404, "text/plain", "Resource not found.");
+      }
+    }
+  });
+
+  server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    Log.verbose(F("serving /status" CR));
+    auto response = new AsyncJsonResponse();
+    response->addHeader("Cache-Control", "no-store, must-revalidate");
+    
+    auto root = response->getRoot();
+
+    root["voltage"] = current_voltage;
+    root["clients"] = WiFi.softAPgetStationNum();
+    root["uptime"] = getUptime();
+
+    response->setLength();
+    request->send(response);
+  });
+
+  // serve all files with cache-header
+  server
+    .serveStatic("/", SPIFFS, "/")
+    .setDefaultFile("index.html")
+    .setCacheControl("max-age=2592000"); // 30 days.
+
+  server.begin();
 }
 
 void setup() {
@@ -58,22 +138,31 @@ void setup() {
   pinMode(STATUS_LED_PIN, OUTPUT);
   digitalWrite(STATUS_LED_PIN, LOW);  // Show that we are on, and LED is working
 
-  Serial.begin(9600);
-  Serial.println("Setup done, wait a while before we start.");
+  Serial.begin(115200);
 
-  WiFi.mode(WIFI_AP);
-  server.on("/", handleRoot);
-  server.on("/status", handleStatus);
-  server.onNotFound(handleNotFound);
-  server.begin();
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
-  delay(5000);
+  // mount SPIFFS filesystem, the files stored in the "data"-directory in the root of this project. Contains the web application files.
+  if (!SPIFFS.begin()) {
+    Log.error(F("Failed to mount SPIFFS filesystem." CR));
+    return;
+  } else {
+    Log.notice(F("SPIFFS mounted." CR));
+  }
+
+  wifi_setup();
+  OTA_setup();
+
+  Log.notice(F("Setup done, wait a while before we start." CR));
+
+  delay(3000);
 
   digitalWrite(STATUS_LED_PIN, HIGH);  // Turn off LED
 }
 
 void step_motor() {
-  Serial.print("Step motor, count: "); Serial.print(steps);
+  Log.notice(F("Step motor, count: %d" CR), steps);
+
   digitalWrite(MOTOR_SLEEP_PIN, HIGH);  // activate motor controller
   delay(2);                             // 1.7ms until controller is booted and ready for pulse
   digitalWrite(MOTOR_STEP_PIN, HIGH);   // trigger single step
@@ -84,7 +173,8 @@ void step_motor() {
 }
 
 void motor_do_360() {
-  Serial.println("Motor do 360 degrees.");
+  Log.notice(F("Motor do 360 degrees." CR));
+
   digitalWrite(MOTOR_SLEEP_PIN, HIGH);  // activate motor controller
   delay(2);                             // 1.7ms until controller is booted and ready for pulse
 
@@ -100,7 +190,7 @@ void motor_do_360() {
 }
 
 void puff_smoke() {
-    Serial.print(", Puff smoke");
+    Log.notice(F("Puff smoke" CR));
     digitalWrite(SMOKER_FAN_PIN, HIGH);  // start smoke fan for a short while to exhaust a smoke puff
     delay(100);
     digitalWrite(SMOKER_FAN_PIN, LOW);
@@ -118,9 +208,7 @@ void check_battery() {
   current_voltage = ((float)sum / (float)ADC_NUM_SAMPLES * 5.0) / 1024.0 * 2;  // 2 = voltage divider of equal resistant
 
   if (current_voltage < BATTERY_MINIMUM) {
-    Serial.print(", battery voltage too low! ");
-    Serial.print(current_voltage);
-    Serial.println("V. Shutting down!");
+    Log.warning(F("Battery voltage too low, %dV. Shutting down!" CR), current_voltage);
 
     digitalWrite(SMOKER_PIN, LOW);
     digitalWrite(SMOKER_FAN_PIN, LOW);
@@ -135,9 +223,7 @@ void check_battery() {
     ESP.deepSleep(0);
     exit(1);
   } else {
-    Serial.print(", battery voltage: ");
-    Serial.print(current_voltage);
-    Serial.println("V");
+    Log.notice(F("Battery voltage %dV." CR), current_voltage);
   }
 }
 
@@ -145,9 +231,10 @@ void loop() {
 
   auto currentMillis = millis();
 
-  check_battery();
+  //check_battery();
 
-  server.handleClient();          //Handle client requests
+  dnsServer.processNextRequest();
+  ArduinoOTA.handle();
 
   digitalWrite(SMOKER_PIN, HIGH);  // activate smoker, I know we keep setting this over and over again, but so what?
 
@@ -164,6 +251,4 @@ void loop() {
     puff_smoke();
     last_puff = millis();
   }
-
-  delay(1000);
 }

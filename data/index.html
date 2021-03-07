@@ -7,10 +7,10 @@
 			<link rel="stylesheet" href="./style.css">
 	</head>
 	<body>
-		<h1>Steampunk Hatt</h1>
+		<img src="./favicon.ico"><h1>Steampunk Hatt</h1>
 		<i>En steampunk inspirerad cylinderhatt gjord av "metallplåtar" och inbyggd rökgenerator</i>
 		<p>Batterispänning: <strong><span class="voltage">okänd</span>V</strong><br>
-			 Antal besökare: <strong><span class="clients">0</span></strong><br>
+			 Antal samtidiga besökare: <strong><span class="clients">0</span></strong><br>
 			 Tid sedan omstart: <strong><span class="uptime">okänd</span></strong>
 		</p>
  	  <p>
@@ -45,13 +45,12 @@
 		</ol>
 
 		<h2>Bilder under projektets gång</h2>
-		<br>
-		<img src="./IMG_3954.webp" />
-		<p>Vaxad hatt, med ett gammalt skärp och med små kuggjul fastlimmade.</p>
-		<img src="./IMG_4021.webp" />
+		<p>Hattformat liggunderlag med mossgummilappar ditklistrade. Droppar med epoxylim ger illusionen av nitar i plåten.</p>
+		<img src="./IMG_3954.webp" loading="lazy"/>
+		<p>Målad och vaxad hatt, med ett gammalt skärp och med små kuggjul fastlimmade.</p>
+		<img src="./IMG_4021.webp" loading="lazy"/>
 		<br>
 		<h2>Elektronik</h2>
-		<br>
 		<p>
 		I min hatt finns lite elektronik som styr rökmaskinen, och tanken var att även en stegmotor skulle kunna styras för att erbjuda lite rörelse med utanpåliggande kugghjul.
 		Elektroniken styrs av en ESP8266 mikrokontroller på ett egenbyggt kretskort, men du kan förmodligen styra det med vad som helst.
@@ -59,14 +58,14 @@
 		</p>
 		<a href="./Schematic.pdf">Kretsschema</a><br>
 		<a href="./PCB.svg">PCB kort</a>
-		<p>Mjukvaran är skriven för <a href="https://platformio.org/">Platform.io</a>.<br>
+		<p>Mjukvaran är skriven i "C" för <a href="https://platformio.org/">Platform.io</a>.<br>
 			 Ladda ner utvecklingsmiljön, kompilera koden och ladda upp till microkontrollern med:</p>
 		<pre>
 			platformio run -t buildfs
 			platformio run -t uploadfs
 			platformio run -t upload
 		</pre>
-
+		<p>Henrik Östman, 2021</p>
 		<script>
 			async function renderStatus() {
    			const response = await fetch('/status', {

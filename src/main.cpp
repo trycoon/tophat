@@ -63,7 +63,7 @@ void OTA_setup() {
 String getUptime() {
   long millisecs = millis();
   char s[32];
-  snprintf(s, sizeof(s), "%02dtim %02dmin %02dsec", millisecs / 1000 / 60 / 60, (millisecs / 1000 / 60) % 60, (millisecs / 1000) % 60);
+  snprintf(s, sizeof(s), "%02d tim %02d min %02d sec", millisecs / 1000 / 60 / 60, (millisecs / 1000 / 60) % 60, (millisecs / 1000) % 60);
   return String(s);
 }
 
@@ -115,7 +115,7 @@ void wifi_setup() {
   server
     .serveStatic("/", SPIFFS, "/")
     .setDefaultFile("index.html")
-    .setCacheControl("max-age=2592000"); // 30 days.
+    .setCacheControl("max-age=21600"); // 6 hours in seconds.
 
   server.begin();
 }
@@ -208,7 +208,7 @@ void check_battery() {
   current_voltage = ((float)sum / (float)ADC_NUM_SAMPLES * 5.0) / 1024.0 * 2;  // 2 = voltage divider of equal resistant
 
   if (current_voltage < BATTERY_MINIMUM) {
-    Log.warning(F("Battery voltage too low, %dV. Shutting down!" CR), current_voltage);
+    Log.warning(F("Battery voltage too low, %DV. Shutting down!" CR), current_voltage);
 
     digitalWrite(SMOKER_PIN, LOW);
     digitalWrite(SMOKER_FAN_PIN, LOW);
@@ -223,7 +223,7 @@ void check_battery() {
     ESP.deepSleep(0);
     exit(1);
   } else {
-    Log.notice(F("Battery voltage %dV." CR), current_voltage);
+    Log.notice(F("Battery voltage %DV." CR), current_voltage);
   }
 }
 
@@ -231,7 +231,7 @@ void loop() {
 
   auto currentMillis = millis();
 
-  //check_battery();
+  check_battery();
 
   dnsServer.processNextRequest();
   ArduinoOTA.handle();

@@ -19,7 +19,7 @@
 
 #define DEGREES_PER_STEP 7.5    // motor resolution when fullstepping
 #define STEPS_FOR_360 360 / 7.5
-#define PUFF_DELAY 5000         // milliseconds between puffs
+#define PUFF_DELAY 4000         // milliseconds between puffs
 
 
 #define ADC_OFFSET 8.34         // measure and compare to a known voltage source 
@@ -30,6 +30,7 @@ const byte DNS_PORT = 53;
 const char *HOSTNAME = "tophat";
 
 uint8_t steps = 1;
+uint16_t pageloads = 0;
 double current_voltage = 0;
 unsigned long last_puff = millis();
 DNSServer dnsServer;
@@ -58,7 +59,7 @@ void OTA_setup() {
 
   ArduinoOTA.setPort(8266);
   ArduinoOTA.setHostname(HOSTNAME);
-  ArduinoOTA.setPassword((const char *)"goldstar");
+  ArduinoOTA.setPassword((const char *)"sigge");
   ArduinoOTA.begin();
 }
 
@@ -67,6 +68,20 @@ String getUptime() {
   char s[32];
   snprintf(s, sizeof(s), "%02d tim %02d min %02d sec", millisecs / 1000 / 60 / 60, (millisecs / 1000 / 60) % 60, (millisecs / 1000) % 60);
   return String(s);
+}
+
+String templateProcessor(const String& var) {
+  // "%" in HTML must be escaped with an additional "%", like this "%%"!
+  if (var == "BATTERY_VOLTAGE") {
+    return String(current_voltage);
+  } else if (var == "CONCURRENT_VISITORS") {
+    return String(WiFi.softAPgetStationNum());
+  } else if (var == "PAGE_LOADS") {
+    ++pageloads;
+    return String(pageloads);
+  } else if(var == "UPTIME") {
+    return getUptime();
+  } else return var;
 }
 
 void wifi_setup() {
@@ -107,17 +122,21 @@ void wifi_setup() {
 
     root["voltage"] = current_voltage;
     root["clients"] = WiFi.softAPgetStationNum();
+    root["pageloads"] = pageloads;
     root["uptime"] = getUptime();
 
     response->setLength();
     request->send(response);
   });
 
-  // serve all files with cache-header
+  // 
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/index.html", "text/html", false, templateProcessor);
+  });
+  // serve all other resources, with cache-header
   server
     .serveStatic("/", SPIFFS, "/")
-    .setDefaultFile("index.html")
-    .setCacheControl("max-age=21600"); // 6 hours in seconds.
+    .setCacheControl("max-age=21600");   // 6 hours in seconds.
 
   server.begin();
 }
@@ -194,7 +213,7 @@ void motor_do_360() {
 void puff_smoke() {
     Log.notice(F("Puff smoke" CR));
     digitalWrite(SMOKER_FAN_PIN, HIGH);  // start smoke fan for a short while to exhaust a smoke puff
-    delay(100);
+    delay(150);
     digitalWrite(SMOKER_FAN_PIN, LOW);
 }
 
@@ -208,6 +227,7 @@ void check_battery() {
 
   // https://arduinodiy.wordpress.com/2016/12/25/monitoring-lipo-battery-voltage-with-wemos-d1-minibattery-shield-and-thingspeak/
   current_voltage = (float)sum / (float)ADC_NUM_SAMPLES / 1023.0 * ADC_OFFSET;
+  current_voltage = roundf(current_voltage * 100) / 100;  // round to two decimals
 
   if (current_voltage < BATTERY_MINIMUM) {
     Log.warning(F("Battery voltage too low, %DV. Shutting down!" CR), current_voltage);
@@ -238,7 +258,7 @@ void loop() {
   dnsServer.processNextRequest();
   ArduinoOTA.handle();
 
-  digitalWrite(SMOKER_PIN, HIGH);  // activate smoker, I know we keep setting this over and over again, but so what?
+  digitalWrite(SMOKER_PIN, currentMillis % 2000 > 500);  // activate smoker for parts of the time. Conserv battery and keep it from getting too hot.
 
   /* Enable if we want to use stepper-motor
   if (steps > STEPS_FOR_360) {
@@ -253,4 +273,6 @@ void loop() {
     puff_smoke();
     last_puff = millis();
   }
+
+  delay(5);
 }

@@ -9,9 +9,10 @@
 	<body>
 		<img src="./favicon.ico"><h1>Steampunk Hatt</h1>
 		<i>En steampunk inspirerad cylinderhatt gjord av "metallplåtar" och inbyggd rökgenerator</i>
-		<p>Batterispänning: <strong><span class="voltage">okänd</span>V</strong><br>
-			 Antal samtidiga besökare: <strong><span class="clients">0</span></strong><br>
-			 Tid sedan omstart: <strong><span class="uptime">okänd</span></strong>
+		<p>Batterispänning: <strong><span class="voltage">%BATTERY_VOLTAGE%</span>V</strong><br>
+			 Sidladdningar: <strong><span class="pageloads">%PAGE_LOADS%</span></strong><br>
+			 Antal samtidiga besökare: <strong><span class="clients">%CONCURRENT_VISITORS%</span></strong><br>
+			 Tid sedan omstart: <strong><span class="uptime">%UPTIME%</span></strong>
 		</p>
  	  <p>
 			<a href="https://github.com/trycoon/tophat">Bygg din EGEN hatt, https://github.com/trycoon/tophat</a>
@@ -25,7 +26,7 @@
 			<li>1-2st tuber kontaktlim, Biltema m.fl.</li>
 			<li><a href="https://www.google.com/search?q=Aged+brass+Art+alchemy+metallic+wax&tbm=isch">Mässingfärgat metallvax</a></li>
 			<li><a href="https://www.aliexpress.com/item/4001275225466.html">"Metal Engine Idling Smoke Generator for Heng Long 1/16 RC Tank Model Car 63HE"</a></li>
-			<li><a href="https://www.google.com/search?q=%22lolin+d1+mini%22&tbm=isch">"Lolin D1 Mini"</a>, ESP8266-baserad mikrocontroller</li>
+			<li><a href="https://www.google.com/search?q=%%22lolin+d1+mini%%22&tbm=isch">"Lolin D1 Mini"</a>, ESP8266-baserad mikrocontroller</li>
 			<li>Egenbyggt kretskort med komponenter, se nedanför.
 			</li><a href="https://www.thingiverse.com/thing:2792893">3D printade skorstenar</a>, egna gjorda av koppar funkar också.</li>
 		</ul>
@@ -75,6 +76,7 @@
   			const status = await response.json();
 				document.querySelector(".voltage").textContent = status.voltage;
 				document.querySelector(".clients").textContent = status.clients;
+				document.querySelector(".pageloads").textContent = status.pageloads;
 				document.querySelector(".uptime").textContent = status.uptime;
 			}
 

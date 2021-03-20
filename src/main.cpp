@@ -21,6 +21,8 @@
 #define STEPS_FOR_360 360 / 7.5
 #define PUFF_DELAY 5000         // milliseconds between puffs
 
+
+#define ADC_OFFSET 8.34         // measure and compare to a known voltage source 
 #define ADC_NUM_SAMPLES 5
 #define BATTERY_MINIMUM 6.2     // 3.0V per cell is lowest recommendation for Li-Ion cells (2 x 3.0 = 6V)
 
@@ -204,8 +206,8 @@ void check_battery() {
       delay(5);
   }
 
-  //https://www.engineersgarage.com/esp8266/nodemcu-battery-voltage-monitor/
-  current_voltage = ((float)sum / (float)ADC_NUM_SAMPLES * 5.0) / 1024.0 * 2;  // 2 = voltage divider of equal resistant
+  // https://arduinodiy.wordpress.com/2016/12/25/monitoring-lipo-battery-voltage-with-wemos-d1-minibattery-shield-and-thingspeak/
+  current_voltage = (float)sum / (float)ADC_NUM_SAMPLES / 1023.0 * ADC_OFFSET;
 
   if (current_voltage < BATTERY_MINIMUM) {
     Log.warning(F("Battery voltage too low, %DV. Shutting down!" CR), current_voltage);

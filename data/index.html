@@ -7,7 +7,7 @@
 			<link rel="stylesheet" href="./style.css">
 	</head>
 	<body>
-		<img src="./favicon.ico"><h1>Steampunk Hatt</h1>
+		<img class="logo" src="./favicon.ico"><h1>Steampunk Hatt</h1>
 		<i>En steampunk inspirerad cylinderhatt gjord av "metallplåtar" och inbyggd rökgenerator</i>
 		<p>Batterispänning: <strong><span class="voltage">%BATTERY_VOLTAGE%</span>V</strong><br>
 			 Sidladdningar: <strong><span class="pageloads">%PAGE_LOADS%</span></strong><br>
@@ -68,6 +68,8 @@
 		</pre>
 		<p>Henrik Östman, 2021</p>
 		<script>
+			let runSmoker = false;
+
 			async function renderStatus() {
    			const response = await fetch('/status', {
     			cache: 'no-cache'
@@ -78,11 +80,24 @@
 				document.querySelector(".clients").textContent = status.clients;
 				document.querySelector(".pageloads").textContent = status.pageloads;
 				document.querySelector(".uptime").textContent = status.uptime;
+				runSmoker = status.runSmoker;
 			}
 
 			setInterval(() => {
 				renderStatus();
 			}, 2000);
+
+			document.querySelector(".logo").addEventListener('click', event => {
+				fetch('/state', {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						runSmoker: !runSmoker
+					})
+				});
+			});
 		</script>
 	</body>
 </html>

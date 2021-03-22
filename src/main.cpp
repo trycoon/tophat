@@ -32,6 +32,7 @@ const char *HOSTNAME = "tophat";
 uint8_t steps = 1;
 uint16_t pageloads = 0;
 double current_voltage = 0;
+boolean runSmoker = false;
 unsigned long last_puff = millis();
 DNSServer dnsServer;
 AsyncWebServer server(80);    // Webserver on port 80;
@@ -114,7 +115,7 @@ void wifi_setup() {
   });
 
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Log.verbose(F("serving /status" CR));
+    Log.verbose(F("serving GET /status" CR));
     auto response = new AsyncJsonResponse();
     response->addHeader("Cache-Control", "no-store, must-revalidate");
     
@@ -124,12 +125,29 @@ void wifi_setup() {
     root["clients"] = WiFi.softAPgetStationNum();
     root["pageloads"] = pageloads;
     root["uptime"] = getUptime();
+    root["runSmoker"] = runSmoker;
 
     response->setLength();
     request->send(response);
   });
 
-  // 
+  server.on("/state", HTTP_PUT, [](AsyncWebServerRequest *request) { }, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    Log.verbose(F("serving PUT /state" CR));
+ 
+    DynamicJsonDocument root(100);       
+    auto error = deserializeJson(root, (const char*)data);
+
+    if (!error) {
+      if (root.containsKey("runSmoker")) {
+        runSmoker = root["runSmoker"];
+      }
+
+      request->send(200);
+    } else {
+      request->send(400, "text/plain", "Bad Request");
+    }
+  });
+
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(SPIFFS, "/index.html", "text/html", false, templateProcessor);
   });
@@ -258,8 +276,6 @@ void loop() {
   dnsServer.processNextRequest();
   ArduinoOTA.handle();
 
-  digitalWrite(SMOKER_PIN, currentMillis % 2000 > 500);  // activate smoker for parts of the time. Conserv battery and keep it from getting too hot.
-
   /* Enable if we want to use stepper-motor
   if (steps > STEPS_FOR_360) {
     motor_do_360();
@@ -269,9 +285,18 @@ void loop() {
     steps++;
   }*/
 
-  if (currentMillis - last_puff > PUFF_DELAY) {
-    puff_smoke();
-    last_puff = millis();
+  if (runSmoker) {
+    // Constant smoke
+    digitalWrite(SMOKER_PIN, HIGH);
+    digitalWrite(SMOKER_FAN_PIN, HIGH);
+  } else {
+    // Smoke puffing
+    digitalWrite(SMOKER_PIN, currentMillis % 2000 > 500);  // activate smoker for parts of the time. Conserv battery and keep it from getting too hot.
+
+    if (currentMillis - last_puff > PUFF_DELAY) {
+      puff_smoke();
+      last_puff = millis();
+    }
   }
 
   delay(5);

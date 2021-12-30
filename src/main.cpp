@@ -24,7 +24,7 @@
 
 #define ADC_OFFSET 8.34         // measure and compare to a known voltage source 
 #define ADC_NUM_SAMPLES 5
-#define BATTERY_MINIMUM 6.2     // 3.0V per cell is lowest recommendation for Li-Ion cells (2 x 3.0 = 6V)
+#define BATTERY_MINIMUM 6.0     // 2.5V per cell is the absolute lowest recommendation for Li-Ion cells (I use 2 x NCR18650B)
 
 const byte DNS_PORT = 53;
 const char *HOSTNAME = "tophat";
@@ -194,7 +194,7 @@ void setup() {
 
   Log.notice(F("Setup done, wait a while before we start." CR));
 
-  delay(3000);
+  delay(2000);
 
   digitalWrite(STATUS_LED_PIN, HIGH);  // Turn off LED
 }

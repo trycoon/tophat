@@ -67,7 +67,7 @@ void OTA_setup() {
 String getUptime() {
   long millisecs = millis();
   char s[32];
-  snprintf(s, sizeof(s), "%02d tim %02d min %02d sec", millisecs / 1000 / 60 / 60, (millisecs / 1000 / 60) % 60, (millisecs / 1000) % 60);
+  snprintf(s, sizeof(s), "%02ld tim %02ld min %02ld sec", millisecs / 1000 / 60 / 60, (millisecs / 1000 / 60) % 60, (millisecs / 1000) % 60);
   return String(s);
 }
 
